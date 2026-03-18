@@ -27,8 +27,10 @@ jobs:
 
     - name: 🧪 Execute Stress Test
       env:
-        # Injects your secret into the test environment
         ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        # THIS IS THE FIX:
+        PYTHONPATH: .
       run: |
         python services/StressTester.py
 
