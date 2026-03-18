@@ -1,0 +1,24 @@
+# --- Vanguard Nexus Exclusions ---
+
+# Python Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Microservices State (Do not push live data logs)
+system_state.json
+
+# Environment & Virtual Envs
+.env
+.venv
+env/
+venv/
+ENV/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Docker Logs
+*.log
+docker-compose.override.yml
