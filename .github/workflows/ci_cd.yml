@@ -26,12 +26,13 @@ jobs:
         python -m nltk.downloader vader_lexicon
 
     - name: 🧪 Execute Stress Test
-      # Verifies the SentimentEngine and ServiceRegistry work under load
+      env:
+        # Injects your secret into the test environment
+        ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
       run: |
         python services/StressTester.py
 
     - name: 🐳 Build Docker Image
-      # Verifies the Dockerfile and environment setup
       run: |
         docker build -t vanguard-nexus:latest .
 
