@@ -5,7 +5,6 @@ import discord
 from discord.ext import commands
 
 # --- ROBUST PATH INJECTION ---
-# This ensures GitHub Actions can find 'core' and 'services' folders
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
@@ -20,50 +19,53 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"🛡️ Vanguard Nexus Online | Logged in as: {bot.user}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Market Cycles"))
+    print(f"🛡️ Zenith Command Online | Session Active")
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Market Intelligence"))
 
 @bot.command(name='zenith')
 async def zenith(ctx, ticker: str = "BTC"):
     ticker = ticker.upper()
-    await ctx.send(f"🛰️ **Vanguard Nexus** is scanning `{ticker}`... Standby.")
+    status_msg = await ctx.send(f"🛰️ **Vanguard Nexus** scanning `{ticker}` news and technicals...")
     
     try:
         api_key = os.getenv("ALPHAVANTAGE_API_KEY")
-        if not api_key:
-            await ctx.send("🚨 **Error:** ALPHAVANTAGE_API_KEY not found in environment.")
-            return
-
         ingestor = FinancialDataIngestor(api_key)
         worker = InferenceWorker()
 
-        raw = ingestor.fetch_latest_news(ticker)
-        intel = worker.process_pending_data(raw, ticker=ticker)
+        # Execute Intelligence Cycle
+        raw_news = ingestor.fetch_latest_news(ticker)
+        intel = worker.process_pending_data(raw_news, ticker=ticker)
 
         if not intel or intel.get('current_price', 0) == 0:
-            await ctx.send(f"❌ **Error:** Could not retrieve data for `{ticker}`. API limit reached?")
+            await status_msg.edit(content=f"❌ **API Limit Reached:** Could not pull data for `{ticker}`. Try again in 60s.")
             return
 
         zones = intel['zones']
-        # Set embed color based on signal
         embed_color = 0x22c55e if "BUY" in intel['confluence_signal'] else 0xef4444 if "SELL" in intel['confluence_signal'] else 0x3b82f6
 
         embed = discord.Embed(
             title=f"🛡️ ZENITH REPORT: {ticker}",
             color=embed_color,
-            timestamp=ctx.message.created_at
+            description=f"**Signal:** {intel['confluence_signal']}"
         )
         
-        embed.add_field(name="Signal", value=f"**{intel['confluence_signal']}**", inline=False)
-        embed.add_field(name="Spot Price", value=f"${intel['current_price']:,.2f}", inline=True)
-        embed.add_field(name="RSI", value=f"{intel['rsi']}", inline=True)
+        # 1. Market Metrics
+        embed.add_field(name="Spot Price", value=f"`${intel['current_price']:,.2f}`", inline=True)
+        embed.add_field(name="RSI (14)", value=f"`{intel['rsi']}`", inline=True)
+        embed.add_field(name="Sentiment", value=f"`{intel['aggregate_score']}`", inline=True)
         
+        # 2. Tactical Zones
         embed.add_field(name="🟢 Entry", value=f"`${zones['entry']:,.2f}`", inline=True)
         embed.add_field(name="🎯 TP", value=f"`${zones['tp']:,.2f}`", inline=True)
         embed.add_field(name="🔴 SL", value=f"`${zones['sl']:,.2f}`", inline=True)
 
-        embed.set_footer(text="Zenith Command • Real-time Intelligence")
-        await ctx.send(embed=embed)
+        # 3. Intelligence Summary (New Feature)
+        if raw_news:
+            headlines = "\n".join([f"• {n['title'][:80]}..." for n in raw_news[:3]])
+            embed.add_field(name="📰 Driving Intelligence", value=headlines, inline=False)
+
+        embed.set_footer(text="Zenith Command • Verified Intelligence")
+        await status_msg.edit(content=None, embed=embed)
 
     except Exception as e:
         await ctx.send(f"⚠️ **Engine Failure:** `{str(e)}`")
@@ -73,4 +75,4 @@ if __name__ == "__main__":
     if token:
         bot.run(token)
     else:
-        print("CRITICAL: DISCORD_BOT_TOKEN not found.")
+        print("CRITICAL: DISCORD_BOT_TOKEN missing.")
