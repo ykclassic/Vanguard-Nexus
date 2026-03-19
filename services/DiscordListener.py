@@ -1,15 +1,19 @@
 import os
-import discord
-from discord.ext import commands
 import sys
 import asyncio
+import discord
+from discord.ext import commands
 
-# Path Injection
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# --- ROBUST PATH INJECTION ---
+# This ensures GitHub Actions can find 'core' and 'services' folders
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
 
 from core.DataIngestor import FinancialDataIngestor
 from services.InferenceWorker import InferenceWorker
 
+# Initialize Bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -17,7 +21,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f"🛡️ Vanguard Nexus Online | Logged in as: {bot.user}")
-    # Activity Status
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Market Cycles"))
 
 @bot.command(name='zenith')
@@ -27,6 +30,10 @@ async def zenith(ctx, ticker: str = "BTC"):
     
     try:
         api_key = os.getenv("ALPHAVANTAGE_API_KEY")
+        if not api_key:
+            await ctx.send("🚨 **Error:** ALPHAVANTAGE_API_KEY not found in environment.")
+            return
+
         ingestor = FinancialDataIngestor(api_key)
         worker = InferenceWorker()
 
@@ -34,13 +41,16 @@ async def zenith(ctx, ticker: str = "BTC"):
         intel = worker.process_pending_data(raw, ticker=ticker)
 
         if not intel or intel.get('current_price', 0) == 0:
-            await ctx.send("❌ **Error:** API Rate limited or ticker invalid.")
+            await ctx.send(f"❌ **Error:** Could not retrieve data for `{ticker}`. API limit reached?")
             return
 
         zones = intel['zones']
+        # Set embed color based on signal
+        embed_color = 0x22c55e if "BUY" in intel['confluence_signal'] else 0xef4444 if "SELL" in intel['confluence_signal'] else 0x3b82f6
+
         embed = discord.Embed(
             title=f"🛡️ ZENITH REPORT: {ticker}",
-            color=0x22c55e if "BUY" in intel['confluence_signal'] else 0xef4444,
+            color=embed_color,
             timestamp=ctx.message.created_at
         )
         
@@ -52,13 +62,15 @@ async def zenith(ctx, ticker: str = "BTC"):
         embed.add_field(name="🎯 TP", value=f"`${zones['tp']:,.2f}`", inline=True)
         embed.add_field(name="🔴 SL", value=f"`${zones['sl']:,.2f}`", inline=True)
 
+        embed.set_footer(text="Zenith Command • Real-time Intelligence")
         await ctx.send(embed=embed)
+
     except Exception as e:
-        await ctx.send(f"⚠️ Engine Failure: `{str(e)}`")
+        await ctx.send(f"⚠️ **Engine Failure:** `{str(e)}`")
 
 if __name__ == "__main__":
     token = os.getenv("DISCORD_BOT_TOKEN")
     if token:
         bot.run(token)
     else:
-        print("Error: DISCORD_BOT_TOKEN not found.")
+        print("CRITICAL: DISCORD_BOT_TOKEN not found.")
