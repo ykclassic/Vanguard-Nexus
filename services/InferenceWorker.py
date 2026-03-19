@@ -12,7 +12,7 @@ class InferenceWorker:
     def process_pending_data(self, raw_data, ticker="BTC"):
         """
         Processes raw feed into sentiment and dispatches alerts.
-        Now explicitly accepts 'ticker' to fix the TypeError.
+        Accepts 'ticker' to resolve the TypeError in the UI.
         """
         if not raw_data:
             return None
@@ -24,7 +24,7 @@ class InferenceWorker:
         ServiceRegistry.save_state("inference_service", intelligence)
         
         # 3. Trigger Discord Notification
-        # This call requires 'ticker' to format the message correctly
+        # We pass the ticker here so the Discord message is context-aware
         self.dispatcher.post_intelligence(intelligence, ticker=ticker)
         
         return intelligence
