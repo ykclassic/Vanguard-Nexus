@@ -1,11 +1,11 @@
 name: Vanguard Nexus Discord Bot
 
 on:
-  workflow_dispatch: # Allows manual start
+  workflow_dispatch:
   push:
-    branches: [ main ] # Starts on every push
+    branches: [ main ]
   schedule:
-    - cron: '0 */6 * * *' # Restarts every 6 hours to ensure it stays alive
+    - cron: '0 */6 * * *'
 
 jobs:
   run-bot:
@@ -17,12 +17,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-python: '3.11'
+          python-version: '3.11'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install discord.py requests pandas
+          pip install discord.py requests pandas nltk
+          # Pre-download the VADER lexicon so the engine doesn't crash
+          python -c "import nltk; nltk.download('vader_lexicon')"
 
       - name: Run Discord Listener
         env:
