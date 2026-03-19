@@ -1,7 +1,7 @@
 import sys
 import os
 import time
-import random
+import random # nosec B311
 
 # Path Guard: Ensures 'core' and 'services' are findable from the root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -21,9 +21,10 @@ class VanguardStressTester:
         ]
 
     def run_test(self, count=1000):
-        # Generate raw data (No hardcoding)
+        # Bandit B311: Standard random is fine for simulation. 
+        # Using # nosec to acknowledge and bypass the warning for this specific line.
         payload = [
-            {"text": random.choice(self.samples), "source": "social_media"} 
+            {"text": random.choice(self.samples), "source": "social_media"} # nosec B311
             for _ in range(count)
         ]
         
