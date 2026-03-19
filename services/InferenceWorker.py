@@ -6,7 +6,7 @@ from services.ServiceRegistry import ServiceRegistry
 from services.AlertService import VanguardDiscordDispatcher
 
 class InferenceWorker:
-    """The Zenith Engine: Re-engineered for bulletproof Crypto data parsing."""
+    """The Zenith Engine: Re-engineered with realistic Risk-to-Reward math."""
     
     def __init__(self):
         self.engine = MarketSentimentEngine()
@@ -24,9 +24,9 @@ class InferenceWorker:
             "apikey": self.api_key
         }
         try:
+            # Added timeout for network reliability
             response = requests.get(url, params=params, timeout=10)
             data = response.json()
-            # Key: "Realtime Currency Exchange Rate" -> "5. Exchange Rate"
             rate_data = data.get("Realtime Currency Exchange Rate", {})
             return float(rate_data.get("5. Exchange Rate", 0.0))
         except:
@@ -45,13 +45,12 @@ class InferenceWorker:
             res = requests.get(url, params=params, timeout=10)
             data = res.json()
             series = data.get("Time Series (Digital Currency Daily)", {})
-            # Extract the USD close price: "4b. close (USD)"
             return [float(v["4b. close (USD)"]) for v in list(series.values())[:20]][::-1]
         except:
             return []
 
     def process_pending_data(self, raw_news, ticker="BTC"):
-        """Executes Zenith Cycle with explicit zero-prevention."""
+        """Executes Zenith Cycle with corrected RRR math."""
         if not raw_news: return None
         
         # 1. Live Price & Sentiment
@@ -65,16 +64,20 @@ class InferenceWorker:
         # 3. Zenith Signal Logic
         signal = self.analyst.get_confluence(intel['aggregate_score'], rsi_val)
         
-        # 4. Tactical Zone Logic (Prevention of 0.0)
-        vol = intel.get('volatility', 0.02)
+        # 4. Realistic Tactical Zone Logic (The Fix)
+        # We scale the raw sentiment volatility (e.g., 0.77) down by a factor of 0.05 
+        # to generate a realistic price swing percentage (e.g., 3.85% risk).
+        # We also cap the maximum allowed risk at 10% (0.10) to prevent blown accounts.
+        raw_vol = intel.get('volatility', 0.02)
+        trade_risk_pct = min(raw_vol * 0.05, 0.10) 
+        
         if current_price > 0:
             zones = {
                 "entry": round(current_price, 2),
-                "sl": round(current_price * (1 - (vol * 1.5)), 2),
-                "tp": round(current_price * (1 + (vol * 3.0)), 2)
+                "sl": round(current_price * (1 - trade_risk_pct), 2),
+                "tp": round(current_price * (1 + (trade_risk_pct * 2.0)), 2) # 1:2 RRR
             }
         else:
-            # Emergency Fallback for UI if API is throttled
             zones = {"entry": 0.0, "sl": 0.0, "tp": 0.0}
 
         intel.update({
