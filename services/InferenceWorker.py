@@ -6,7 +6,7 @@ from services.ServiceRegistry import ServiceRegistry
 from services.AlertService import VanguardDiscordDispatcher
 
 class InferenceWorker:
-    """The Zenith Engine: Calibrated for Crypto Data Accuracy."""
+    """The Zenith Engine: Re-engineered for bulletproof Crypto data parsing."""
     
     def __init__(self):
         self.engine = MarketSentimentEngine()
@@ -14,10 +14,27 @@ class InferenceWorker:
         self.dispatcher = VanguardDiscordDispatcher()
         self.api_key = os.getenv("ALPHAVANTAGE_API_KEY")
 
-    def _get_realtime_price_data(self, ticker):
-        """Robust price fetcher for Crypto and Equities."""
+    def _get_live_spot_price(self, ticker):
+        """Fetches the absolute latest exchange rate (Spot Price)."""
         url = "https://www.alphavantage.co/query"
-        # Using DIGITAL_CURRENCY_DAILY for more reliable historical close data
+        params = {
+            "function": "CURRENCY_EXCHANGE_RATE",
+            "from_currency": ticker,
+            "to_currency": "USD",
+            "apikey": self.api_key
+        }
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            # Key: "Realtime Currency Exchange Rate" -> "5. Exchange Rate"
+            rate_data = data.get("Realtime Currency Exchange Rate", {})
+            return float(rate_data.get("5. Exchange Rate", 0.0))
+        except:
+            return 0.0
+
+    def _get_historical_series(self, ticker):
+        """Fetches historical close prices for RSI calculation."""
+        url = "https://www.alphavantage.co/query"
         params = {
             "function": "DIGITAL_CURRENCY_DAILY",
             "symbol": ticker,
@@ -25,47 +42,43 @@ class InferenceWorker:
             "apikey": self.api_key
         }
         try:
-            response = requests.get(url, params=params, timeout=10)
-            data = response.json()
-            
-            # Navigate the complex Alpha Vantage Crypto JSON
-            time_series_key = "Time Series (Digital Currency Daily)"
-            if time_series_key not in data:
-                print(f"⚠️ API Note: {data.get('Note', 'Check API Key limits')}")
-                return []
-            
-            # Extract '4b. close (USD)' - specifically the USD value
-            series = data[time_series_key]
-            prices = [float(v["4b. close (USD)"]) for v in list(series.values())[:20]]
-            return prices[::-1] # Past to Present
-        except Exception as e:
-            print(f"Price Calibration Error: {e}")
+            res = requests.get(url, params=params, timeout=10)
+            data = res.json()
+            series = data.get("Time Series (Digital Currency Daily)", {})
+            # Extract the USD close price: "4b. close (USD)"
+            return [float(v["4b. close (USD)"]) for v in list(series.values())[:20]][::-1]
+        except:
             return []
 
     def process_pending_data(self, raw_news, ticker="BTC"):
-        """Executes Zenith Cycle with Zero-Value Protection."""
+        """Executes Zenith Cycle with explicit zero-prevention."""
         if not raw_news: return None
         
+        # 1. Live Price & Sentiment
+        current_price = self._get_live_spot_price(ticker)
         intel = self.engine.calculate_weighted_sentiment(raw_news)
-        price_history = self._get_realtime_price_data(ticker)
         
-        # Zero-Value Protection
-        current_price = price_history[-1] if price_history else 0.0
-        rsi_val = self.analyst.calculate_rsi(price_history) if len(price_history) >= 14 else 50.0
+        # 2. Historicals for RSI
+        history = self._get_historical_series(ticker)
+        rsi_val = self.analyst.calculate_rsi(history) if len(history) >= 14 else 50.0
         
-        # Calculate Signals
+        # 3. Zenith Signal Logic
         signal = self.analyst.get_confluence(intel['aggregate_score'], rsi_val)
         
-        # Calculate Zones (Only if price exists)
+        # 4. Tactical Zone Logic (Prevention of 0.0)
         vol = intel.get('volatility', 0.02)
-        zones = {
-            "entry": current_price,
-            "sl": round(current_price * (1 - (vol * 1.2)), 2) if current_price > 0 else 0,
-            "tp": round(current_price * (1 + (vol * 2.5)), 2) if current_price > 0 else 0
-        }
+        if current_price > 0:
+            zones = {
+                "entry": round(current_price, 2),
+                "sl": round(current_price * (1 - (vol * 1.5)), 2),
+                "tp": round(current_price * (1 + (vol * 3.0)), 2)
+            }
+        else:
+            # Emergency Fallback for UI if API is throttled
+            zones = {"entry": 0.0, "sl": 0.0, "tp": 0.0}
 
         intel.update({
-            "current_price": round(current_price, 2),
+            "current_price": current_price,
             "rsi": round(rsi_val, 2),
             "confluence_signal": signal,
             "zones": zones
