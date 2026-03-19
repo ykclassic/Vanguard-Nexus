@@ -1,11 +1,14 @@
 import pandas as pd
 
 class TechnicalAnalyst:
-    """Calculates mathematical indicators for market confluence."""
+    """Mathematical engine for Technical Indicator Confluence."""
     
     def calculate_rsi(self, prices, period=14):
-        """Relative Strength Index to identify Overbought/Oversold."""
-        delta = pd.Series(prices).diff()
+        """Calculates the Relative Strength Index (RSI)."""
+        if len(prices) < period: return 50
+        
+        series = pd.Series(prices)
+        delta = series.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
         
@@ -13,10 +16,14 @@ class TechnicalAnalyst:
         rsi = 100 - (100 / (1 + rs))
         return rsi.iloc[-1]
 
-    def get_confluence(self, sentiment_score, rsi):
-        """Checks if Sentiment and Technicals align."""
-        if sentiment_score > 0.2 and rsi < 30:
-            return "STRONG BUY (Oversold + Bullish News)"
-        if sentiment_score < -0.2 and rsi > 70:
-            return "STRONG SELL (Overbought + Bearish News)"
-        return "Neutral / Wait"
+    def get_confluence(self, sentiment, rsi):
+        """Logic-gate for high-probability signals."""
+        if sentiment > 0.15 and rsi < 40:
+            return "🔥 STRONG BUY (Bullish Sentiment + Low RSI)"
+        elif sentiment < -0.15 and rsi > 60:
+            return "❄️ STRONG SELL (Bearish Sentiment + High RSI)"
+        elif sentiment > 0.1:
+            return "📈 LEAN BULLISH"
+        elif sentiment < -0.1:
+            return "📉 LEAN BEARISH"
+        return "⚖️ NEUTRAL"
