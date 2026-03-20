@@ -5,7 +5,7 @@ def main_zenith():
     st.title("🛡️ Vanguard Nexus: Zenith Command")
     
     # NEW: Multi-Asset Monitoring Sidebar
-    assets = st.sidebar.multiselect("Active Sentries", ["BTC", "ETH", "SOL", "XAU"], default=["BTC"])
+    assets = st.sidebar.multiselect("Active Sentries", ["BTC", "ETH", "SOL", "XRP", "BNB", "LINK", "POL", "PEPE", "DOGE", "SUI" "ADA", "LTC", "XAU"], default=["BTC"])
     
     for ticker in assets:
         with st.expander(f"📊 Intelligence Stream: {ticker}", expanded=True):
